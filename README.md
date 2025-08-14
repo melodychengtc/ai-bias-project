@@ -69,3 +69,75 @@ Labels:
 **Summary:**
 - **Original model**: Perfect recall but moderate precision → more human texts flagged incorrectly.
 - **Fine-tuned model**: Slight recall drop, **big precision gain**, fewer false positives, and improved overall accuracy.
+
+---
+
+## Bias Analysis
+
+We audited dataset representation across three text-based groups: **Length**, **Lexical Diversity**, and **Punctuation**.  
+Below are the class distributions (AI = positive class).
+
+### Group Distributions (from dataset)
+
+**Length**
+| Group | Total Samples | AI Samples | Human Samples | % AI in Group |
+|:-----|--------------:|-----------:|--------------:|--------------:|
+| Long | 722 | 0 | 722 | 0.00 |
+| Short | 738 | 85 | 653 | 11.52 |
+
+**Lexical Diversity**
+| Group | Total Samples | AI Samples | Human Samples | % AI in Group |
+|:---------------|--------------:|-----------:|--------------:|--------------:|
+| High Diversity | 730 | 84 | 646 | 11.51 |
+| Low Diversity  | 730 | 1  | 729 | 0.14 |
+
+**Punctuation**
+| Group | Total Samples | AI Samples | Human Samples | % AI in Group |
+|:-----------------|--------------:|-----------:|--------------:|--------------:|
+| High Punctuation | 730 | 78 | 652 | 10.68 |
+| Low Punctuation  | 730 | 7  | 723 | 0.96 |
+
+### What this shows (Representation Bias)
+
+- **Long vs Short:** Long texts have **0% AI** (0/722) while Short texts have **11.52% AI**.  
+  → The model cannot learn to detect AI on Long texts due to **no positive examples**.
+
+- **Lexical Diversity:** High-diversity texts have **11.51% AI**, Low-diversity have **0.14% AI**.  
+  → Severe under-representation of AI in **Low Diversity**.
+
+- **Punctuation:** High-punctuation texts have **10.68% AI**, Low-punctuation have **0.96% AI**.  
+  → AI is scarce in **Low Punctuation**.
+
+**Disparity (max − min %AI)**
+- Length: **11.52 pp**
+- Diversity: **11.37 pp** (11.51 − 0.14)
+- Punctuation: **9.72 pp** (10.68 − 0.96)
+
+These gaps indicate **representation bias**: the dataset contains far fewer (or zero) AI examples in certain groups, so any model trained on it will likely under-detect AI there (high FNR, low recall), regardless of algorithm.
+
+### Impact on Evaluation
+
+- In groups with **zero AI samples** (e.g., Long), **recall/FNR are undefined** for the positive class (no TP+FN). Any apparent “good” performance there is not evidence of true detection capability.
+- Overall accuracy can look high while **systematic blind spots** persist in underrepresented groups.
+
+### Mitigations
+
+1. **Data Rebalancing**
+   - Add AI-generated samples for **Long**, **Low Diversity**, and **Low Punctuation** groups.
+   - Target at least a **similar %AI** as the better-represented counterpart (≈10–12%).
+
+2. **Stratified Sampling / Group-Weighted Training**
+   - Ensure each group contributes positives and negatives per batch/epoch.
+   - Consider **group-aware loss** (e.g., sample weights per group).
+
+3. **Two-Stage Thresholding**
+   - Keep your global threshold.
+   - Add **group-specific guardrails** (slightly lower threshold in underrepresented groups) until data is rebalanced. Monitor for new false positives.
+
+4. **Robust Reporting**
+   - Always report **per-group**: Precision, Recall, FNR, and **Selection Rate**.
+   - Highlight groups with **low or zero positives** as “insufficient data to assess.”
+
+5. **(Optional) Synthetic Augmentation**
+   - Generate AI essays that are **longer**, **lower diversity**, and **lower punctuation** to fill gaps. Validate with human review.
+
