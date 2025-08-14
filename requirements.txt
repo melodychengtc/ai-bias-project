@@ -1,0 +1,13 @@
+pandas
+numpy
+scikit-learn
+fairlearn
+imbalanced-learn
+shap
+jupyter
+jupyterlab
+ipykernel
+kaggle
+kagglehub
+matplotlib
+scikit-learn
